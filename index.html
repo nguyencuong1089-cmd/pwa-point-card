@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thẻ Tích Điểm Cá Nhân + Google Drive Sync (Tìm 4 số cuối)</title>
+<title>Thẻ Tích Điểm Cá Nhân + Google Drive Sync</title>
 <style>
 body { font-family: sans-serif; padding: 20px; }
 input { padding: 8px; margin: 5px 0; width: 100%; }
@@ -13,7 +13,7 @@ button { padding: 10px; margin-top: 10px; width: 100%; }
 </style>
 </head>
 <body>
-<h2>Thẻ Tích Điểm Cá Nhân + Google Drive (Tìm 4 số cuối)</h2>
+<h2>Thẻ Tích Điểm Cá Nhân + Google Drive</h2>
 
 <input id="searchPhone" placeholder="Tìm theo 4 số cuối số điện thoại">
 <button onclick="searchCustomer()">Tìm kiếm</button>
@@ -39,8 +39,11 @@ button { padding: 10px; margin-top: 10px; width: 100%; }
 
 <script>
 let data = JSON.parse(localStorage.getItem("customers") || "[]");
+
+// Tích hợp URL Web App Google Drive của bạn
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLGrDRIkCh1Q5oBORB2VEeCsg4JmxJCUdiP1iDq5ODBktfgH3wxFa_oCMqL4zl_hgzKQ/exec";
 
+// Đồng bộ dữ liệu lên Google Drive
 async function syncToDrive(c) {
     try {
         await fetch(GOOGLE_SCRIPT_URL, {
@@ -51,6 +54,7 @@ async function syncToDrive(c) {
     } catch(e){ console.error("Sync failed", e);}
 }
 
+// Load dữ liệu từ Google Drive
 async function loadFromDrive() {
     try {
         let res = await fetch(GOOGLE_SCRIPT_URL + "?action=getAllCustomers");
@@ -63,6 +67,7 @@ function save(){ localStorage.setItem("customers", JSON.stringify(data)); }
 function today(){ return new Date().toISOString().split("T")[0]; }
 function addDays(n){ let d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().split("T")[0]; }
 function getFavoriteFood(arr){ if(!arr||arr.length===0)return null; let map={}; arr.forEach(x=>map[x]=(map[x]||0)+1); return Object.keys(map).sort((a,b)=>map[b]-map[a])[0];}
+function getFoodCounts(arr){ let map={}; arr.forEach(x=>map[x]=(map[x]||0)+1); return map;}
 
 function render() {
     let box = document.getElementById("list"); box.innerHTML="";
@@ -73,12 +78,16 @@ function render() {
         let favFood=getFavoriteFood(c.foodHistory||[]);
         let expireText="";
         if(c.expireDate){ let diff=Math.ceil((new Date(c.expireDate)-new Date())/86400000); expireText=diff<0?"Hết hạn":diff+" ngày còn lại"; }
+        let foodCounts = getFoodCounts(c.foodHistory||[]);
+        let foodListHtml = "";
+        for(let f in foodCounts){ foodListHtml += f + " (" + foodCounts[f] + " lần)<br>"; }
         div.innerHTML=`
         <b>${c.name} (${c.phone})</b><br>
         Món thường ăn: ${favFood||"—"}<br>
         Điểm hiện tại: ${c.points}<br>
         Quà tặng: ${c.gifts}<br>
         Số lần mua: ${c.purchaseCount||0}<br>
+        Danh sách món ăn:<br>${foodListHtml}
         Hạn: ${c.expireDate} (${expireText})<br><br>
         <button onclick="subPoint('${c.phone}')">-1</button>
         <button onclick="del('${c.phone}')">Xoá</button>
@@ -120,7 +129,10 @@ function searchCustomer(){
     let html="";
     matched.forEach(c=>{
         let favFood=getFavoriteFood(c.foodHistory||[]);
-        html+=`<div class="item"><b>${c.name} (${c.phone})</b><br>Món thường ăn: ${favFood||"—"}<br>Điểm: ${c.points}<br>Quà tặng: ${c.gifts}<br>Số lần mua: ${c.purchaseCount||0}<br>Hạn: ${c.expireDate}</div>`;
+        let foodCounts = getFoodCounts(c.foodHistory||[]);
+        let foodListHtml = "";
+        for(let f in foodCounts){ foodListHtml += f + " (" + foodCounts[f] + " lần)<br>"; }
+        html+=`<div class="item"><b>${c.name} (${c.phone})</b><br>Món thường ăn: ${favFood||"—"}<br>Điểm: ${c.points}<br>Quà tặng: ${c.gifts}<br>Số lần mua: ${c.purchaseCount||0}<br>Danh sách món ăn:<br>${foodListHtml}<br>Hạn: ${c.expireDate}</div>`;
     });
     box.innerHTML=html;
 }
